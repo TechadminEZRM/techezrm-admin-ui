@@ -2,6 +2,7 @@ export { authService } from './authService';
 export { userService } from './userService';
 // export { productsService } from './products';
 export { productService } from './products';
+export { productVariantService } from './productVariants';
 export { rfqService } from './rfq';
 export { ordersService } from './orders';
 export { customerReviewsService } from './customerReviews';
@@ -77,3 +78,10 @@ export type {
   CustomerWishlistData,
   CustomerWishlistResponse,
 } from './customers';
+export type {
+  ProductVariant,
+  CreateProductVariantRequest,
+  UpdateProductVariantRequest,
+  ProductVariantResponse,
+  ProductVariantsListResponse,
+} from './productVariants';

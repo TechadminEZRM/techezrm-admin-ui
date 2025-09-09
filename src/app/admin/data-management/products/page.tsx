@@ -32,7 +32,11 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import ImageIcon from '@mui/icons-material/Image';
 import CloseIcon from '@mui/icons-material/Close';
+import VariantsIcon from '@mui/icons-material/ViewList';
 import Image from 'next/image';
+import ProductVariantsModal from '../../../../components/modals/ProductVariantsModal';
+import EditProductModal from '../../../../components/modals/EditProductModal';
+import ProductDetailsModal from '../../../../components/modals/ProductDetailsModal';
 
 interface ProductRowData extends TableRowData {
   id: string;
@@ -57,6 +61,16 @@ export default function ProductsListing() {
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string>('');
+  const [variantsModalOpen, setVariantsModalOpen] = useState(false);
+  const [editProductModalOpen, setEditProductModalOpen] = useState(false);
+  const [productDetailsModalOpen, setProductDetailsModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<{
+    id: string;
+    name: string;
+    data?: any;
+  } | null>(null);
+  const [productToEdit, setProductToEdit] = useState<any>(null);
+  const [productToView, setProductToView] = useState<string | null>(null);
 
   const renderImage = (imageUrl: string) => {
     if (!imageUrl) {
@@ -163,7 +177,7 @@ export default function ProductsListing() {
   const products = productsData?.products || [];
   const totalResults = productsData?.pagination?.total || 0;
 
-  const renderActions = (productId: string) => (
+  const renderActions = (productId: string, productName: string) => (
     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
       <IconButton
         size="small"
@@ -172,8 +186,20 @@ export default function ProductsListing() {
           handleViewProduct(productId);
         }}
         sx={{ color: '#1976d2' }}
+        title="View Product"
       >
         <VisibilityIcon fontSize="small" />
+      </IconButton>
+      <IconButton
+        size="small"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleViewVariants(productId, productName);
+        }}
+        sx={{ color: '#9c27b0' }}
+        title="View Variants"
+      >
+        <VariantsIcon fontSize="small" />
       </IconButton>
       <IconButton
         size="small"
@@ -182,6 +208,7 @@ export default function ProductsListing() {
           handleEditProduct(productId);
         }}
         sx={{ color: '#ff9800' }}
+        title="Edit Product"
       >
         <EditIcon fontSize="small" />
       </IconButton>
@@ -192,6 +219,7 @@ export default function ProductsListing() {
           handleDeleteProduct(productId);
         }}
         sx={{ color: '#f44336' }}
+        title="Delete Product"
       >
         <DeleteIcon fontSize="small" />
       </IconButton>
@@ -206,7 +234,7 @@ export default function ProductsListing() {
     price: `$${product.price || 0}`,
     status: product.status || 'inactive',
     inStock: product.inStock ? 'Yes' : 'No',
-    actions: renderActions(product?._id),
+    actions: renderActions(product?._id, product.name),
   }));
 
   const columns = [
@@ -227,7 +255,7 @@ export default function ProductsListing() {
       width: '12%',
       align: 'center' as const,
     },
-    { id: 'actions', label: 'Actions', width: '19%', align: 'center' as const },
+    { id: 'actions', label: 'Actions', width: '25%', align: 'center' as const },
   ];
 
   const handlePageChange = (newPage: number) => {
@@ -244,16 +272,31 @@ export default function ProductsListing() {
   };
 
   const handleEditProduct = (productId: string) => {
-    router.push(`/admin/data-management/products/${productId}/edit`);
+    const product = products.find((p: any) => p._id === productId);
+    if (product) {
+      setProductToEdit(product);
+      setEditProductModalOpen(true);
+    }
   };
 
   const handleViewProduct = (productId: string) => {
-    router.push(`/admin/data-management/products/${productId}`);
+    setProductToView(productId);
+    setProductDetailsModalOpen(true);
   };
 
   const handleDeleteProduct = (productId: string) => {
     setProductToDelete(productId);
     setDeleteDialogOpen(true);
+  };
+
+  const handleViewVariants = (productId: string, productName: string) => {
+    const product = products.find((p: any) => p._id === productId);
+    setSelectedProduct({
+      id: productId,
+      name: productName,
+      data: product,
+    });
+    setVariantsModalOpen(true);
   };
 
   const handleImageClick = (imageUrl: string, e: React.MouseEvent) => {
@@ -501,6 +544,44 @@ export default function ProductsListing() {
           </Box>
         </DialogContent>
       </Dialog>
+
+      {/* Product Variants Modal */}
+      {selectedProduct && (
+        <ProductVariantsModal
+          open={variantsModalOpen}
+          onClose={() => {
+            setVariantsModalOpen(false);
+            setSelectedProduct(null);
+          }}
+          productId={selectedProduct.id}
+          productName={selectedProduct.name}
+          productData={selectedProduct.data}
+        />
+      )}
+
+      {/* Edit Product Modal */}
+      {productToEdit && (
+        <EditProductModal
+          open={editProductModalOpen}
+          onClose={() => {
+            setEditProductModalOpen(false);
+            setProductToEdit(null);
+          }}
+          product={productToEdit}
+        />
+      )}
+
+      {/* Product Details Modal */}
+      {productToView && (
+        <ProductDetailsModal
+          open={productDetailsModalOpen}
+          onClose={() => {
+            setProductDetailsModalOpen(false);
+            setProductToView(null);
+          }}
+          productId={productToView}
+        />
+      )}
     </Box>
   );
 }

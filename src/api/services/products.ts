@@ -2,16 +2,31 @@
 import { api } from '../config';
 
 export interface Product {
-  id?: string;
+  _id?: string;
+  uniqueId?: string;
+  seq?: number;
   name: string;
-  description: string;
+  description?: string;
   price: number;
-  category: string;
+  category?: {
+    _id: string;
+    name: string;
+  };
   inStock: boolean;
-  bannerImage?: File;
-  images?: File[];
-  createdAt?: Date;
-  updatedAt?: Date;
+  bannerImage?: string;
+  images?: string[];
+  status?: string;
+  moq?: number;
+  unit?: string;
+  tags?: string[];
+  appearance?: string;
+  dietaryAttributes?: Array<{
+    title: string;
+    logo: string;
+    certificateLink: string;
+  }>;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateProductRequest {
@@ -42,7 +57,12 @@ export interface ProductsListResponse {
 }
 
 class ProductService {
-  getProductsByPriceRange(arg0: { minPrice: number; maxPrice: number; page: number; limit: number; }): Promise<unknown> {
+  getProductsByPriceRange(arg0: {
+    minPrice: number;
+    maxPrice: number;
+    page: number;
+    limit: number;
+  }): Promise<unknown> {
     throw new Error('Method not implemented.');
   }
   private baseUrl = '/private/products';

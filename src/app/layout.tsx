@@ -22,7 +22,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>
+      <body suppressHydrationWarning={true}>
         <ClientProvider>{children}</ClientProvider>
         <ToastContainer position="top-center" />
       </body>
