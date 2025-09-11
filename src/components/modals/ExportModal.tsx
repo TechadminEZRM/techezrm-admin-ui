@@ -17,6 +17,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import DescriptionIcon from '@mui/icons-material/Description';
 import Image from 'next/image';
+import { getAvailableExportFormats } from '../../utils/exportUtils';
 
 interface ExportModalProps {
   open: boolean;
@@ -34,6 +35,9 @@ const ExportModal: React.FC<ExportModalProps> = ({
   const [selectedFormat, setSelectedFormat] = useState<
     'pdf' | 'excel' | 'csv' | null
   >(null);
+
+  // Get available export formats
+  const availableFormats = getAvailableExportFormats();
 
   const handleExport = async (format: 'pdf' | 'excel' | 'csv') => {
     setSelectedFormat(format);
@@ -105,114 +109,142 @@ const ExportModal: React.FC<ExportModalProps> = ({
           Choose the format you want to export your products data:
         </Typography>
 
+        {!availableFormats.pdf && !availableFormats.excel && (
+          <Box
+            sx={{
+              p: 2,
+              backgroundColor: '#FFF3CD',
+              border: '1px solid #FFEAA7',
+              borderRadius: '8px',
+              mb: 2,
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: '12px',
+                color: '#856404',
+                fontFamily: 'Poppins, sans-serif',
+              }}
+            >
+              <strong>Note:</strong> PDF and Excel exports require additional
+              packages. Install them with:{' '}
+              <code>npm install jspdf jspdf-autotable xlsx</code>
+            </Typography>
+          </Box>
+        )}
+
         <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
           {/* PDF Option */}
-          <Button
-            variant="outlined"
-            onClick={() => handleExport('pdf')}
-            disabled={isLoading}
-            startIcon={
-              selectedFormat === 'pdf' && isLoading ? (
-                <CircularProgress size={16} />
-              ) : (
-                <PictureAsPdfIcon sx={{ color: '#DC2626' }} />
-              )
-            }
-            sx={{
-              p: 2,
-              justifyContent: 'flex-start',
-              border: '2px solid #E5E7EB',
-              borderRadius: '8px',
-              textTransform: 'none',
-              fontFamily: 'Poppins, sans-serif',
-              fontSize: '14px',
-              fontWeight: 500,
-              color: '#1F2A44',
-              '&:hover': {
-                borderColor: '#DC2626',
-                backgroundColor: 'rgba(220, 38, 38, 0.04)',
-              },
-              '&:disabled': {
-                opacity: 0.6,
-              },
-            }}
-          >
-            <Box sx={{ ml: 1 }}>
-              <Typography
-                sx={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: '#1F2A44',
-                  fontFamily: 'Poppins, sans-serif',
-                }}
-              >
-                Export as PDF
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: '12px',
-                  color: '#737791',
-                  fontFamily: 'Poppins, sans-serif',
-                }}
-              >
-                Download products data as a PDF document
-              </Typography>
-            </Box>
-          </Button>
+          {availableFormats.pdf && (
+            <Button
+              variant="outlined"
+              onClick={() => handleExport('pdf')}
+              disabled={isLoading}
+              startIcon={
+                selectedFormat === 'pdf' && isLoading ? (
+                  <CircularProgress size={16} />
+                ) : (
+                  <PictureAsPdfIcon sx={{ color: '#DC2626' }} />
+                )
+              }
+              sx={{
+                p: 2,
+                justifyContent: 'flex-start',
+                border: '2px solid #E5E7EB',
+                borderRadius: '8px',
+                textTransform: 'none',
+                fontFamily: 'Poppins, sans-serif',
+                fontSize: '14px',
+                fontWeight: 500,
+                color: '#1F2A44',
+                '&:hover': {
+                  borderColor: '#DC2626',
+                  backgroundColor: 'rgba(220, 38, 38, 0.04)',
+                },
+                '&:disabled': {
+                  opacity: 0.6,
+                },
+              }}
+            >
+              <Box sx={{ ml: 1 }}>
+                <Typography
+                  sx={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#1F2A44',
+                    fontFamily: 'Poppins, sans-serif',
+                  }}
+                >
+                  Export as PDF
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: '12px',
+                    color: '#737791',
+                    fontFamily: 'Poppins, sans-serif',
+                  }}
+                >
+                  Download products data as a PDF document
+                </Typography>
+              </Box>
+            </Button>
+          )}
 
           {/* Excel Option */}
-          <Button
-            variant="outlined"
-            onClick={() => handleExport('excel')}
-            disabled={isLoading}
-            startIcon={
-              selectedFormat === 'excel' && isLoading ? (
-                <CircularProgress size={16} />
-              ) : (
-                <TableChartIcon sx={{ color: '#06A561' }} />
-              )
-            }
-            sx={{
-              p: 2,
-              justifyContent: 'flex-start',
-              border: '2px solid #E5E7EB',
-              borderRadius: '8px',
-              textTransform: 'none',
-              fontFamily: 'Poppins, sans-serif',
-              fontSize: '14px',
-              fontWeight: 500,
-              color: '#1F2A44',
-              '&:hover': {
-                borderColor: '#06A561',
-                backgroundColor: 'rgba(6, 165, 97, 0.04)',
-              },
-              '&:disabled': {
-                opacity: 0.6,
-              },
-            }}
-          >
-            <Box sx={{ ml: 1 }}>
-              <Typography
-                sx={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: '#1F2A44',
-                  fontFamily: 'Poppins, sans-serif',
-                }}
-              >
-                Export as Excel
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: '12px',
-                  color: '#737791',
-                  fontFamily: 'Poppins, sans-serif',
-                }}
-              >
-                Download products data as an Excel spreadsheet
-              </Typography>
-            </Box>
-          </Button>
+          {availableFormats.excel && (
+            <Button
+              variant="outlined"
+              onClick={() => handleExport('excel')}
+              disabled={isLoading}
+              startIcon={
+                selectedFormat === 'excel' && isLoading ? (
+                  <CircularProgress size={16} />
+                ) : (
+                  <TableChartIcon sx={{ color: '#06A561' }} />
+                )
+              }
+              sx={{
+                p: 2,
+                justifyContent: 'flex-start',
+                border: '2px solid #E5E7EB',
+                borderRadius: '8px',
+                textTransform: 'none',
+                fontFamily: 'Poppins, sans-serif',
+                fontSize: '14px',
+                fontWeight: 500,
+                color: '#1F2A44',
+                '&:hover': {
+                  borderColor: '#06A561',
+                  backgroundColor: 'rgba(6, 165, 97, 0.04)',
+                },
+                '&:disabled': {
+                  opacity: 0.6,
+                },
+              }}
+            >
+              <Box sx={{ ml: 1 }}>
+                <Typography
+                  sx={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#1F2A44',
+                    fontFamily: 'Poppins, sans-serif',
+                  }}
+                >
+                  Export as Excel
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: '12px',
+                    color: '#737791',
+                    fontFamily: 'Poppins, sans-serif',
+                  }}
+                >
+                  Download products data as an Excel spreadsheet
+                </Typography>
+              </Box>
+            </Button>
+          )}
 
           {/* CSV Option */}
           <Button

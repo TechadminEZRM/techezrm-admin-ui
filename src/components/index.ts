@@ -1,6 +1,7 @@
 // Forms
 export { default as TableComponent } from './TableComponent';
 export { default as TableFilter } from './TableFilter';
+export { default as ExportInstallationGuide } from './ExportInstallationGuide';
 
 // Modals
 export { default as AddSupplierModal } from './modals/AddSupplierModal';

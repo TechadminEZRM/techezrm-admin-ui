@@ -31,11 +31,47 @@ export interface ExportProduct {
   updatedAt?: string;
 }
 
+// Check if dependencies are available
+const checkDependencies = () => {
+  const missingDeps: string[] = [];
+
+  try {
+    require.resolve('jspdf');
+  } catch {
+    missingDeps.push('jspdf');
+  }
+
+  try {
+    require.resolve('jspdf-autotable');
+  } catch {
+    missingDeps.push('jspdf-autotable');
+  }
+
+  try {
+    require.resolve('xlsx');
+  } catch {
+    missingDeps.push('xlsx');
+  }
+
+  return missingDeps;
+};
+
 // PDF Export using jsPDF
 export const exportToPDF = async (
   products: ExportProduct[],
   filename: string = 'products'
 ) => {
+  // Check dependencies first
+  const missingDeps = checkDependencies();
+  const pdfDeps = ['jspdf', 'jspdf-autotable'];
+  const missingPdfDeps = missingDeps.filter((dep) => pdfDeps.includes(dep));
+
+  if (missingPdfDeps.length > 0) {
+    throw new Error(
+      `PDF export requires these packages: ${missingPdfDeps.join(', ')}. Please install them using: npm install ${missingPdfDeps.join(' ')}`
+    );
+  }
+
   try {
     // Dynamic import to avoid SSR issues
     const { default: jsPDF } = await import('jspdf');
@@ -162,6 +198,15 @@ export const exportToExcel = async (
   products: ExportProduct[],
   filename: string = 'products'
 ) => {
+  // Check dependencies first
+  const missingDeps = checkDependencies();
+
+  if (missingDeps.includes('xlsx')) {
+    throw new Error(
+      'Excel export requires the xlsx package. Please install it using: npm install xlsx'
+    );
+  }
+
   try {
     // Dynamic import to avoid SSR issues
     const { default: XLSX } = await import('xlsx');
@@ -371,6 +416,19 @@ export const exportToCSV = async (
     console.error('Error exporting to CSV:', error);
     throw new Error('Failed to export CSV. Please try again.');
   }
+};
+
+// Check which export formats are available
+export const getAvailableExportFormats = () => {
+  const missingDeps = checkDependencies();
+
+  return {
+    csv: true, // CSV is always available
+    pdf:
+      !missingDeps.includes('jspdf') &&
+      !missingDeps.includes('jspdf-autotable'),
+    excel: !missingDeps.includes('xlsx'),
+  };
 };
 
 // Helper function to get all products for export
