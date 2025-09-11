@@ -74,8 +74,78 @@ export const exportToPDF = async (
 
   try {
     // Dynamic import to avoid SSR issues
-    const { default: jsPDF } = await import('jspdf');
-    const { default: autoTable } = await import('jspdf-autotable');
+    const jsPDFModule = await import('jspdf');
+    const jsPDF = jsPDFModule.default;
+
+    // Import jspdf-autotable with error handling
+    let autoTable;
+    try {
+      const autoTableModule = await import('jspdf-autotable');
+      autoTable = autoTableModule.default;
+    } catch (autoTableError) {
+      console.warn(
+        'jspdf-autotable import failed, falling back to basic PDF export:',
+        autoTableError
+      );
+      // Fallback: create a comprehensive PDF without tables
+      const doc = new jsPDF('l', 'mm', 'a4');
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Products Export (Basic Format)', 14, 20);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Exported on: ${new Date().toLocaleDateString()}`, 14, 30);
+
+      // Add comprehensive product list
+      let yPosition = 50;
+      products.forEach((product, index) => {
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        // Product header
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${index + 1}. ${product.name}`, 14, yPosition);
+        yPosition += 8;
+
+        // Product details
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const details = [
+          `ID: ${product._id}`,
+          `Price: $${product.price || 0}`,
+          `Category: ${product.category?.name || 'N/A'}`,
+          `Status: ${product.status || 'N/A'}`,
+          `In Stock: ${product.inStock ? 'Yes' : 'No'}`,
+          `MOQ: ${product.moq || 'N/A'}`,
+          `Unit: ${product.unit || 'N/A'}`,
+          `Description: ${product.description || 'N/A'}`,
+          `Tags: ${product.tags?.join(', ') || 'N/A'}`,
+          `Applications: ${product.applications?.join(', ') || 'N/A'}`,
+          `Functions: ${product.functions?.join(', ') || 'N/A'}`,
+          `Country of Origin: ${product.countryOfOrigin?.join(', ') || 'N/A'}`,
+          `Banner Image: ${product.bannerImage || 'N/A'}`,
+          `Images: ${product.images?.join(', ') || 'N/A'}`,
+          `Created: ${product.createdAt ? new Date(product.createdAt).toLocaleDateString() : 'N/A'}`,
+        ];
+
+        details.forEach((detail) => {
+          if (yPosition > 250) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          doc.text(detail, 20, yPosition);
+          yPosition += 5;
+        });
+
+        yPosition += 10; // Extra space between products
+      });
+
+      doc.save(`${filename}_${new Date().toISOString().split('T')[0]}.pdf`);
+      return;
+    }
 
     const doc = new jsPDF('l', 'mm', 'a4'); // landscape orientation for better table view
 
@@ -89,94 +159,169 @@ export const exportToPDF = async (
     doc.setFont('helvetica', 'normal');
     doc.text(`Exported on: ${new Date().toLocaleDateString()}`, 14, 30);
 
-    // Prepare table data
+    // Prepare comprehensive table data (same as Excel)
     const tableData = products.map((product) => [
+      product._id || 'N/A',
+      product.uniqueId || '',
+      product.seq || '',
       product.name || 'N/A',
-      product.category?.name || 'N/A',
+      product.description || '',
       `$${product.price || 0}`,
-      product.status || 'N/A',
+      product.category?._id || '',
+      product.category?.name || '',
       product.inStock ? 'Yes' : 'No',
-      product.moq || 'N/A',
-      product.unit || 'N/A',
-      product.tags?.join(', ') || 'N/A',
-      product.applications?.join(', ') || 'N/A',
-      product.functions?.join(', ') || 'N/A',
-      product.countryOfOrigin?.join(', ') || 'N/A',
-      product.createdAt
-        ? new Date(product.createdAt).toLocaleDateString()
-        : 'N/A',
+      product.status || '',
+      product.moq || '',
+      product.unit || '',
+      product.tags?.join(', ') || '',
+      product.appearance || '',
+      product.applications?.join(', ') || '',
+      product.functions?.join(', ') || '',
+      product.countryOfOrigin?.join(', ') || '',
+      product.bannerImage || '',
+      product.images?.join(', ') || '',
+      product.dietaryAttributes
+        ?.map((attr) => `${attr.title} (${attr.logo})`)
+        .join('; ') || '',
+      product.createdAt ? new Date(product.createdAt).toLocaleDateString() : '',
+      product.updatedAt ? new Date(product.updatedAt).toLocaleDateString() : '',
     ]);
 
-    // Define table columns
+    // Define comprehensive table columns (same as Excel)
     const columns = [
+      'Product ID',
+      'Unique ID',
+      'Sequence',
       'Product Name',
-      'Category',
+      'Description',
       'Price',
-      'Status',
+      'Category ID',
+      'Category Name',
       'In Stock',
+      'Status',
       'MOQ',
       'Unit',
       'Tags',
+      'Appearance',
       'Applications',
       'Functions',
       'Country of Origin',
+      'Banner Image',
+      'Images',
+      'Dietary Attributes',
       'Created Date',
+      'Updated Date',
     ];
 
-    // Add table
+    // Add comprehensive table with better formatting
     autoTable(doc, {
       head: [columns],
       body: tableData,
       startY: 40,
       styles: {
-        fontSize: 8,
-        cellPadding: 3,
+        fontSize: 6, // Smaller font for more columns
+        cellPadding: 2,
+        overflow: 'linebreak',
+        halign: 'left',
+        valign: 'middle',
       },
       headStyles: {
         fillColor: [25, 118, 210], // Blue header
         textColor: 255,
         fontStyle: 'bold',
+        fontSize: 7,
       },
       alternateRowStyles: {
         fillColor: [248, 249, 250], // Light gray for alternate rows
       },
-      margin: { left: 14, right: 14 },
+      columnStyles: {
+        // Set specific column widths for better layout
+        0: { cellWidth: 15 }, // Product ID
+        1: { cellWidth: 12 }, // Unique ID
+        2: { cellWidth: 8 }, // Sequence
+        3: { cellWidth: 20 }, // Product Name
+        4: { cellWidth: 25 }, // Description
+        5: { cellWidth: 10 }, // Price
+        6: { cellWidth: 15 }, // Category ID
+        7: { cellWidth: 18 }, // Category Name
+        8: { cellWidth: 8 }, // In Stock
+        9: { cellWidth: 10 }, // Status
+        10: { cellWidth: 8 }, // MOQ
+        11: { cellWidth: 8 }, // Unit
+        12: { cellWidth: 15 }, // Tags
+        13: { cellWidth: 15 }, // Appearance
+        14: { cellWidth: 20 }, // Applications
+        15: { cellWidth: 20 }, // Functions
+        16: { cellWidth: 18 }, // Country of Origin
+        17: { cellWidth: 25 }, // Banner Image
+        18: { cellWidth: 30 }, // Images
+        19: { cellWidth: 25 }, // Dietary Attributes
+        20: { cellWidth: 12 }, // Created Date
+        21: { cellWidth: 12 }, // Updated Date
+      },
+      margin: { left: 10, right: 10 },
+      tableWidth: 'auto',
+      showHead: 'everyPage',
     });
 
-    // Add additional product details on separate pages if needed
+    // Add summary section (similar to Excel export)
     if (products.length > 0) {
       let currentY = (doc as any).lastAutoTable.finalY + 20;
 
-      products.forEach((product, index) => {
-        // Check if we need a new page
-        if (currentY > 250) {
-          doc.addPage();
-          currentY = 20;
-        }
+      // Check if we need a new page for summary
+      if (currentY > 200) {
+        doc.addPage();
+        currentY = 20;
+      }
 
-        // Add detailed product information
-        doc.setFontSize(12);
+      // Add summary title
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Export Summary', 14, currentY);
+      currentY += 15;
+
+      // Add summary data
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+
+      const summaryData = [
+        { label: 'Total Products', value: products.length.toString() },
+        {
+          label: 'Active Products',
+          value: products
+            .filter((p) => p.status === 'active')
+            .length.toString(),
+        },
+        {
+          label: 'Inactive Products',
+          value: products
+            .filter((p) => p.status === 'inactive')
+            .length.toString(),
+        },
+        {
+          label: 'In Stock Products',
+          value: products.filter((p) => p.inStock).length.toString(),
+        },
+        {
+          label: 'Out of Stock Products',
+          value: products.filter((p) => !p.inStock).length.toString(),
+        },
+        {
+          label: 'Average Price',
+          value:
+            products.length > 0
+              ? `$${(products.reduce((sum, p) => sum + (p.price || 0), 0) / products.length).toFixed(2)}`
+              : '$0.00',
+        },
+        { label: 'Export Date', value: new Date().toLocaleDateString() },
+      ];
+
+      summaryData.forEach((item) => {
         doc.setFont('helvetica', 'bold');
-        doc.text(`Product ${index + 1}: ${product.name}`, 14, currentY);
-        currentY += 10;
-
-        doc.setFontSize(10);
+        doc.text(`${item.label}:`, 14, currentY);
         doc.setFont('helvetica', 'normal');
-
-        const details = [
-          `ID: ${product._id}`,
-          `Unique ID: ${product.uniqueId || 'N/A'}`,
-          `Description: ${product.description || 'N/A'}`,
-          `Appearance: ${product.appearance || 'N/A'}`,
-          `Dietary Attributes: ${product.dietaryAttributes?.map((attr) => attr.title).join(', ') || 'N/A'}`,
-        ];
-
-        details.forEach((detail) => {
-          doc.text(detail, 14, currentY);
-          currentY += 6;
-        });
-
-        currentY += 10;
+        doc.text(item.value, 80, currentY);
+        currentY += 8;
       });
     }
 
@@ -209,7 +354,8 @@ export const exportToExcel = async (
 
   try {
     // Dynamic import to avoid SSR issues
-    const { default: XLSX } = await import('xlsx');
+    const XLSX = await import('xlsx');
+    const { utils } = XLSX;
 
     // Prepare data for Excel
     const excelData = products.map((product) => ({
@@ -245,8 +391,8 @@ export const exportToExcel = async (
     }));
 
     // Create workbook and worksheet
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = utils.book_new();
+    const worksheet = utils.json_to_sheet(excelData);
 
     // Set column widths
     const columnWidths = [
@@ -277,7 +423,7 @@ export const exportToExcel = async (
     worksheet['!cols'] = columnWidths;
 
     // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
+    utils.book_append_sheet(workbook, worksheet, 'Products');
 
     // Add summary sheet
     const summaryData = [
@@ -311,9 +457,9 @@ export const exportToExcel = async (
       { Metric: 'Export Date', Value: new Date().toLocaleDateString() },
     ];
 
-    const summaryWorksheet = XLSX.utils.json_to_sheet(summaryData);
+    const summaryWorksheet = utils.json_to_sheet(summaryData);
     summaryWorksheet['!cols'] = [{ wch: 20 }, { wch: 15 }];
-    XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Summary');
+    utils.book_append_sheet(workbook, summaryWorksheet, 'Summary');
 
     // Save the Excel file
     XLSX.writeFile(
