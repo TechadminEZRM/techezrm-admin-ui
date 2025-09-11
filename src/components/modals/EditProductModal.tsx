@@ -20,7 +20,6 @@ import {
   Chip,
   CircularProgress,
   Alert,
-  Grid,
   InputAdornment,
   Card,
   CardContent,
@@ -34,9 +33,10 @@ import {
   Info as InfoIcon,
   Category as CategoryIcon,
 } from '@mui/icons-material';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import { productService } from '@/api/services/products';
+import { productFiltersService } from '@/api/services';
 
 interface EditProductModalProps {
   open: boolean;
@@ -56,6 +56,9 @@ interface EditProductModalProps {
     unit?: string;
     tags?: string[];
     appearance?: string;
+    applications?: string[];
+    functions?: string[];
+    countryOfOrigin?: string[];
   };
 }
 
@@ -83,8 +86,25 @@ export default function EditProductModal({
     appearance: '',
     tags: [] as string[],
     dietaryAttributes: [] as DietaryAttribute[],
+    applications: [] as string[],
+    functions: [] as string[],
+    countryOfOrigin: [] as string[],
+    bannerImage: '',
+    images: [] as string[],
   });
   const [tagInput, setTagInput] = useState('');
+  const [applicationInput, setApplicationInput] = useState('');
+  const [functionInput, setFunctionInput] = useState('');
+  const [countryInput, setCountryInput] = useState('');
+  const [bannerImageInput, setBannerImageInput] = useState('');
+  const [imageInput, setImageInput] = useState('');
+
+  // Fetch filter data
+  const { data: filtersData, isLoading: filtersLoading } = useQuery({
+    queryKey: ['productFilters'],
+    queryFn: productFiltersService.getFiltersData,
+    enabled: open, // Only fetch when modal is open
+  });
 
   // Unit options
   const unitOptions = [
@@ -110,17 +130,13 @@ export default function EditProductModal({
     'capsule',
   ];
 
-  // Category options
-  const categoryOptions = [
-    'Sports Nutrition',
-    'Bioactives',
-    'Nootropics',
-    'Amino Acids',
-    'Vitamins',
-    'Minerals',
-    'Herbs',
-    'Supplements',
-  ];
+  // Category options from API
+  const categoryOptions =
+    filtersData?.data?.category?.categories?.map((cat) => cat.name) || [];
+
+  // Country options from API
+  const countryOptions =
+    filtersData?.data?.countryOfOrigin?.map((country) => country.name) || [];
 
   // Initialize form data when product changes
   useEffect(() => {
@@ -137,6 +153,11 @@ export default function EditProductModal({
         appearance: product.appearance || '',
         tags: product.tags || [],
         dietaryAttributes: [],
+        applications: product.applications || [],
+        functions: product.functions || [],
+        countryOfOrigin: product.countryOfOrigin || [],
+        bannerImage: product.bannerImage || '',
+        images: product.images || [],
       });
     }
   }, [product]);
@@ -178,6 +199,87 @@ export default function EditProductModal({
     }));
   };
 
+  const handleAddApplication = () => {
+    if (
+      applicationInput.trim() &&
+      !formData.applications.includes(applicationInput.trim())
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        applications: [...prev.applications, applicationInput.trim()],
+      }));
+      setApplicationInput('');
+    }
+  };
+
+  const handleRemoveApplication = (applicationToRemove: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      applications: prev.applications.filter(
+        (app) => app !== applicationToRemove
+      ),
+    }));
+  };
+
+  const handleAddFunction = () => {
+    if (
+      functionInput.trim() &&
+      !formData.functions.includes(functionInput.trim())
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        functions: [...prev.functions, functionInput.trim()],
+      }));
+      setFunctionInput('');
+    }
+  };
+
+  const handleRemoveFunction = (functionToRemove: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      functions: prev.functions.filter((func) => func !== functionToRemove),
+    }));
+  };
+
+  const handleAddCountry = () => {
+    if (
+      countryInput.trim() &&
+      !formData.countryOfOrigin.includes(countryInput.trim())
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        countryOfOrigin: [...prev.countryOfOrigin, countryInput.trim()],
+      }));
+      setCountryInput('');
+    }
+  };
+
+  const handleRemoveCountry = (countryToRemove: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      countryOfOrigin: prev.countryOfOrigin.filter(
+        (country) => country !== countryToRemove
+      ),
+    }));
+  };
+
+  const handleAddImage = () => {
+    if (imageInput.trim() && !formData.images.includes(imageInput.trim())) {
+      setFormData((prev) => ({
+        ...prev,
+        images: [...prev.images, imageInput.trim()],
+      }));
+      setImageInput('');
+    }
+  };
+
+  const handleRemoveImage = (imageToRemove: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((image) => image !== imageToRemove),
+    }));
+  };
+
   const handleSubmit = () => {
     if (!formData.name.trim()) {
       toast.error('Product name is required');
@@ -188,11 +290,78 @@ export default function EditProductModal({
       return;
     }
 
-    updateProductMutation.mutate(formData);
+    // Create FormData for multipart/form-data
+    const formDataToSend = new FormData();
+
+    // Add all the fields
+    formDataToSend.append('name', formData.name);
+    formDataToSend.append('description', formData.description || '');
+    formDataToSend.append('price', formData.price.toString());
+    formDataToSend.append('category', formData.category || '');
+    formDataToSend.append('inStock', formData.inStock.toString());
+    formDataToSend.append('status', formData.status);
+    formDataToSend.append('moq', formData.moq?.toString() || '');
+    formDataToSend.append('unit', formData.unit || '');
+    formDataToSend.append('appearance', formData.appearance || '');
+    formDataToSend.append('bannerImage', formData.bannerImage || '');
+
+    // Add images array
+    if (formData.images && formData.images.length > 0) {
+      formDataToSend.append('images', JSON.stringify(formData.images));
+    }
+
+    // Add arrays as JSON strings with proper identifiers
+    if (formData.tags && formData.tags.length > 0) {
+      // Convert tag names to slugs
+      const tagSlugs = formData.tags.map((tagName) => {
+        const tagData = filtersData?.data?.tag?.find(
+          (tag) => tag.name === tagName
+        );
+        return tagData?.slug || tagName.toLowerCase().replace(/\s+/g, '-');
+      });
+      formDataToSend.append('tags', JSON.stringify(tagSlugs));
+    }
+    if (formData.applications && formData.applications.length > 0) {
+      // Convert application names to slugs
+      const applicationSlugs = formData.applications.map((appName) => {
+        const appData = filtersData?.data?.application?.find(
+          (app) => app.name === appName
+        );
+        return appData?.slug || appName.toLowerCase().replace(/\s+/g, '-');
+      });
+      formDataToSend.append('applications', JSON.stringify(applicationSlugs));
+    }
+    if (formData.functions && formData.functions.length > 0) {
+      // Convert function names to slugs
+      const functionSlugs = formData.functions.map((funcName) => {
+        const funcData = filtersData?.data?.function?.find(
+          (func) => func.name === funcName
+        );
+        return funcData?.slug || funcName.toLowerCase().replace(/\s+/g, '-');
+      });
+      formDataToSend.append('functions', JSON.stringify(functionSlugs));
+    }
+    if (formData.countryOfOrigin && formData.countryOfOrigin.length > 0) {
+      // Convert country names to country codes
+      const countryCodes = formData.countryOfOrigin.map((countryName) => {
+        const countryData = filtersData?.data?.countryOfOrigin?.find(
+          (country) => country.name === countryName
+        );
+        return countryData?.countryCode || countryName;
+      });
+      formDataToSend.append('countryOfOrigin', JSON.stringify(countryCodes));
+    }
+
+    updateProductMutation.mutate(formDataToSend);
   };
 
   const handleClose = () => {
     setTagInput('');
+    setApplicationInput('');
+    setFunctionInput('');
+    setCountryInput('');
+    setBannerImageInput('');
+    setImageInput('');
     onClose();
   };
 
@@ -200,12 +369,13 @@ export default function EditProductModal({
     <Dialog
       open={open}
       onClose={handleClose}
-      maxWidth="md"
+      maxWidth="lg"
       fullWidth
       PaperProps={{
         sx: {
           borderRadius: 2,
-          minHeight: '80vh',
+          minHeight: '85vh',
+          width: '90vw',
         },
       }}
     >
@@ -235,10 +405,24 @@ export default function EditProductModal({
       </DialogTitle>
 
       <DialogContent sx={{ p: 0, backgroundColor: '#ffffff' }}>
+        {filtersLoading && (
+          <Box sx={{ p: 2, textAlign: 'center' }}>
+            <CircularProgress size={24} />
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              Loading filter data...
+            </Typography>
+          </Box>
+        )}
         <Box sx={{ p: 3 }}>
-          <Grid container spacing={3}>
-            {/* Column 1: Basic Information */}
-            <Grid item xs={12} md={4}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+            }}
+          >
+            {/* Row 1: Basic Information - Full Width */}
+            <Box sx={{ width: '100%' }}>
               <Card
                 sx={{
                   height: '100%',
@@ -250,105 +434,125 @@ export default function EditProductModal({
                   <Typography
                     variant="h6"
                     sx={{
-                      mb: 3,
+                      mb: 2,
                       fontWeight: 'bold',
                       color: '#1F2A44',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 1,
+                      fontSize: '1.1rem',
                     }}
                   >
-                    <InfoIcon sx={{ fontSize: '1.2rem' }} />
+                    <InfoIcon sx={{ fontSize: '1rem' }} />
                     Basic Information
                   </Typography>
 
-                  <Box
-                    sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-                  >
-                    <TextField
-                      fullWidth
-                      label="Product Name"
-                      value={formData.name}
-                      onChange={(e) =>
-                        handleInputChange('name', e.target.value)
-                      }
-                      required
-                      size="small"
+                  <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2 }}>
+                    {/* Left Column */}
+                    <Box
                       sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                        },
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1.5,
                       }}
-                    />
-
-                    <TextField
-                      fullWidth
-                      label="Price"
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) =>
-                        handleInputChange(
-                          'price',
-                          parseFloat(e.target.value) || 0
-                        )
-                      }
-                      required
-                      size="small"
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">$</InputAdornment>
-                        ),
-                      }}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                        },
-                      }}
-                    />
-
-                    <TextField
-                      fullWidth
-                      label="Description"
-                      value={formData.description}
-                      onChange={(e) =>
-                        handleInputChange('description', e.target.value)
-                      }
-                      multiline
-                      rows={4}
-                      size="small"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                        },
-                      }}
-                    />
-
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Category</InputLabel>
-                      <Select
-                        value={formData.category}
+                    >
+                      <TextField
+                        fullWidth
+                        label="Product Name"
+                        value={formData.name}
                         onChange={(e) =>
-                          handleInputChange('category', e.target.value)
+                          handleInputChange('name', e.target.value)
                         }
-                        label="Category"
+                        required
+                        size="small"
                         sx={{
-                          borderRadius: 2,
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                          },
                         }}
-                      >
-                        {categoryOptions.map((category) => (
-                          <MenuItem key={category} value={category}>
-                            {category}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                      />
+
+                      <TextField
+                        fullWidth
+                        label="Price"
+                        type="number"
+                        value={formData.price}
+                        onChange={(e) =>
+                          handleInputChange(
+                            'price',
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        required
+                        size="small"
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">$</InputAdornment>
+                          ),
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                          },
+                        }}
+                      />
+                    </Box>
+
+                    {/* Right Column */}
+                    <Box
+                      sx={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1.5,
+                      }}
+                    >
+                      <TextField
+                        fullWidth
+                        label="Description"
+                        value={formData.description}
+                        onChange={(e) =>
+                          handleInputChange('description', e.target.value)
+                        }
+                        multiline
+                        rows={4}
+                        size="small"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                          },
+                        }}
+                      />
+
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Category</InputLabel>
+                        <Select
+                          value={formData.category}
+                          onChange={(e) =>
+                            handleInputChange('category', e.target.value)
+                          }
+                          label="Category"
+                          disabled={filtersLoading}
+                          sx={{
+                            borderRadius: 2,
+                          }}
+                        >
+                          {categoryOptions.map((category) => (
+                            <MenuItem key={category} value={category}>
+                              {category}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Box>
                   </Box>
                 </CardContent>
               </Card>
-            </Grid>
+            </Box>
 
-            {/* Column 2: Product Details */}
-            <Grid item xs={12} md={4}>
+            {/* Row 2: Product Details - Full Width */}
+            <Box sx={{ width: '100%' }}>
               <Card
                 sx={{
                   height: '100%',
@@ -360,95 +564,117 @@ export default function EditProductModal({
                   <Typography
                     variant="h6"
                     sx={{
-                      mb: 3,
+                      mb: 2,
                       fontWeight: 'bold',
                       color: '#1F2A44',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 1,
+                      fontSize: '1.1rem',
                     }}
                   >
-                    <CategoryIcon sx={{ fontSize: '1.2rem' }} />
+                    <CategoryIcon sx={{ fontSize: '1rem' }} />
                     Product Details
                   </Typography>
 
-                  <Box
-                    sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-                  >
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Unit</InputLabel>
-                      <Select
-                        value={formData.unit}
-                        onChange={(e) =>
-                          handleInputChange('unit', e.target.value)
-                        }
-                        label="Unit"
-                        sx={{
-                          borderRadius: 2,
-                        }}
-                      >
-                        {unitOptions.map((unit) => (
-                          <MenuItem key={unit} value={unit}>
-                            {unit}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-
-                    <TextField
-                      fullWidth
-                      label="Minimum Order Quantity (MOQ)"
-                      type="number"
-                      value={formData.moq}
-                      onChange={(e) =>
-                        handleInputChange('moq', parseInt(e.target.value) || 0)
-                      }
-                      size="small"
+                  <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2 }}>
+                    {/* Left Column */}
+                    <Box
                       sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                        },
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1.5,
                       }}
-                    />
+                    >
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Unit</InputLabel>
+                        <Select
+                          value={formData.unit}
+                          onChange={(e) =>
+                            handleInputChange('unit', e.target.value)
+                          }
+                          label="Unit"
+                          sx={{
+                            borderRadius: 2,
+                          }}
+                        >
+                          {unitOptions.map((unit) => (
+                            <MenuItem key={unit} value={unit}>
+                              {unit}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
 
-                    <TextField
-                      fullWidth
-                      label="Appearance"
-                      value={formData.appearance}
-                      onChange={(e) =>
-                        handleInputChange('appearance', e.target.value)
-                      }
-                      size="small"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                        },
-                      }}
-                    />
-
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Status</InputLabel>
-                      <Select
-                        value={formData.status}
+                      <TextField
+                        fullWidth
+                        label="Minimum Order Quantity (MOQ)"
+                        type="number"
+                        value={formData.moq}
                         onChange={(e) =>
-                          handleInputChange('status', e.target.value)
+                          handleInputChange(
+                            'moq',
+                            parseInt(e.target.value) || 0
+                          )
                         }
-                        label="Status"
+                        size="small"
                         sx={{
-                          borderRadius: 2,
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                          },
                         }}
-                      >
-                        <MenuItem value="active">Active</MenuItem>
-                        <MenuItem value="inactive">Inactive</MenuItem>
-                      </Select>
-                    </FormControl>
+                      />
+                    </Box>
+
+                    {/* Right Column */}
+                    <Box
+                      sx={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1.5,
+                      }}
+                    >
+                      <TextField
+                        fullWidth
+                        label="Appearance"
+                        value={formData.appearance}
+                        onChange={(e) =>
+                          handleInputChange('appearance', e.target.value)
+                        }
+                        size="small"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                          },
+                        }}
+                      />
+
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Status</InputLabel>
+                        <Select
+                          value={formData.status}
+                          onChange={(e) =>
+                            handleInputChange('status', e.target.value)
+                          }
+                          label="Status"
+                          sx={{
+                            borderRadius: 2,
+                          }}
+                        >
+                          <MenuItem value="active">Active</MenuItem>
+                          <MenuItem value="inactive">Inactive</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Box>
                   </Box>
                 </CardContent>
               </Card>
-            </Grid>
+            </Box>
 
-            {/* Column 3: Status & Tags */}
-            <Grid item xs={12} md={4}>
+            {/* Row 3: Status & Tags - Full Width */}
+            <Box sx={{ width: '100%' }}>
               <Card
                 sx={{
                   height: '100%',
@@ -460,56 +686,500 @@ export default function EditProductModal({
                   <Typography
                     variant="h6"
                     sx={{
-                      mb: 3,
+                      mb: 2,
                       fontWeight: 'bold',
                       color: '#1F2A44',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 1,
+                      fontSize: '1.1rem',
                     }}
                   >
-                    <ViewListIcon sx={{ fontSize: '1.2rem' }} />
+                    <ViewListIcon sx={{ fontSize: '1rem' }} />
                     Status & Tags
+                  </Typography>
+
+                  <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2 }}>
+                    {/* Left Column */}
+                    <Box
+                      sx={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                      }}
+                    >
+                      {/* Stock Status */}
+                      <Box>
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          sx={{ fontWeight: 600, mb: 1, fontSize: '0.85rem' }}
+                        >
+                          Stock Status
+                        </Typography>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={formData.inStock}
+                              onChange={(e) =>
+                                handleInputChange('inStock', e.target.checked)
+                              }
+                              sx={{
+                                '& .MuiSwitch-switchBase': {
+                                  '&.Mui-checked': {
+                                    color: '#4caf50',
+                                    '& + .MuiSwitch-track': {
+                                      backgroundColor: '#4caf50',
+                                    },
+                                  },
+                                },
+                              }}
+                            />
+                          }
+                          label={formData.inStock ? 'In Stock' : 'Out of Stock'}
+                          sx={{
+                            margin: 0,
+                            alignItems: 'center',
+                            '& .MuiFormControlLabel-label': {
+                              fontWeight: 500,
+                              color: formData.inStock ? '#2e7d32' : '#d32f2f',
+                            },
+                          }}
+                        />
+                      </Box>
+                    </Box>
+
+                    {/* Right Column */}
+                    <Box
+                      sx={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                      }}
+                    >
+                      {/* Tags Section */}
+                      <Box>
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          sx={{ fontWeight: 600, mb: 2 }}
+                        >
+                          Product Tags
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                          <TextField
+                            label="Add Tag"
+                            value={tagInput}
+                            onChange={(e) => setTagInput(e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddTag();
+                              }
+                            }}
+                            size="small"
+                            sx={{
+                              flexGrow: 1,
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: 2,
+                              },
+                            }}
+                          />
+                          <Button
+                            variant="contained"
+                            onClick={handleAddTag}
+                            disabled={!tagInput.trim()}
+                            size="small"
+                            sx={{
+                              borderRadius: 2,
+                              backgroundColor: '#1976d2',
+                              '&:hover': { backgroundColor: '#1565c0' },
+                              minWidth: 'auto',
+                              px: 2,
+                            }}
+                          >
+                            Add
+                          </Button>
+                        </Box>
+
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 1,
+                            minHeight: 40,
+                          }}
+                        >
+                          {formData.tags.length === 0 ? (
+                            <Typography
+                              variant="caption"
+                              color="textSecondary"
+                              sx={{ alignSelf: 'center' }}
+                            >
+                              No tags added yet
+                            </Typography>
+                          ) : (
+                            formData.tags.map((tag, index) => (
+                              <Chip
+                                key={index}
+                                label={tag}
+                                onDelete={() => handleRemoveTag(tag)}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                                sx={{ borderRadius: 2 }}
+                              />
+                            ))
+                          )}
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+
+            {/* Row 4: Additional Fields - Full Width */}
+            <Box sx={{ width: '100%' }}>
+              <Card
+                sx={{
+                  height: '100%',
+                  borderRadius: 2,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                }}
+              >
+                <CardContent>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      mb: 2,
+                      fontWeight: 'bold',
+                      color: '#1F2A44',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      fontSize: '1.1rem',
+                    }}
+                  >
+                    <ViewListIcon sx={{ fontSize: '1rem' }} />
+                    Additional Fields
+                  </Typography>
+
+                  <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2 }}>
+                    {/* Left Column */}
+                    <Box
+                      sx={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                      }}
+                    >
+                      {/* Applications Section */}
+                      <Box>
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          sx={{ fontWeight: 600, mb: 2 }}
+                        >
+                          Applications
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                          <FormControl fullWidth size="small">
+                            <InputLabel>Select Application</InputLabel>
+                            <Select
+                              value={applicationInput}
+                              onChange={(e) =>
+                                setApplicationInput(e.target.value)
+                              }
+                              label="Select Application"
+                              disabled={filtersLoading}
+                              sx={{
+                                borderRadius: 2,
+                              }}
+                            >
+                              {filtersData?.data?.application?.map((app) => (
+                                <MenuItem key={app.id} value={app.name}>
+                                  {app.name}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                          <Button
+                            variant="contained"
+                            onClick={handleAddApplication}
+                            disabled={
+                              !applicationInput.trim() || filtersLoading
+                            }
+                            size="small"
+                            sx={{
+                              borderRadius: 2,
+                              backgroundColor: '#4caf50',
+                              '&:hover': { backgroundColor: '#45a049' },
+                              minWidth: 'auto',
+                              px: 2,
+                            }}
+                          >
+                            Add
+                          </Button>
+                        </Box>
+
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 1,
+                            minHeight: 40,
+                          }}
+                        >
+                          {formData.applications.length === 0 ? (
+                            <Typography
+                              variant="caption"
+                              color="textSecondary"
+                              sx={{ alignSelf: 'center' }}
+                            >
+                              No applications added yet
+                            </Typography>
+                          ) : (
+                            formData.applications.map((app, index) => (
+                              <Chip
+                                key={index}
+                                label={app}
+                                onDelete={() => handleRemoveApplication(app)}
+                                size="small"
+                                color="success"
+                                variant="outlined"
+                                sx={{ borderRadius: 2 }}
+                              />
+                            ))
+                          )}
+                        </Box>
+                      </Box>
+                    </Box>
+
+                    {/* Right Column */}
+                    <Box
+                      sx={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                      }}
+                    >
+                      {/* Functions Section */}
+                      <Box>
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          sx={{ fontWeight: 600, mb: 2 }}
+                        >
+                          Functions
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                          <FormControl fullWidth size="small">
+                            <InputLabel>Select Function</InputLabel>
+                            <Select
+                              value={functionInput}
+                              onChange={(e) => setFunctionInput(e.target.value)}
+                              label="Select Function"
+                              disabled={filtersLoading}
+                              sx={{
+                                borderRadius: 2,
+                              }}
+                            >
+                              {filtersData?.data?.function?.map((func) => (
+                                <MenuItem key={func.id} value={func.name}>
+                                  {func.name}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                          <Button
+                            variant="contained"
+                            onClick={handleAddFunction}
+                            disabled={!functionInput.trim() || filtersLoading}
+                            size="small"
+                            sx={{
+                              borderRadius: 2,
+                              backgroundColor: '#ff9800',
+                              '&:hover': { backgroundColor: '#f57c00' },
+                              minWidth: 'auto',
+                              px: 2,
+                            }}
+                          >
+                            Add
+                          </Button>
+                        </Box>
+
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 1,
+                            minHeight: 40,
+                          }}
+                        >
+                          {formData.functions.length === 0 ? (
+                            <Typography
+                              variant="caption"
+                              color="textSecondary"
+                              sx={{ alignSelf: 'center' }}
+                            >
+                              No functions added yet
+                            </Typography>
+                          ) : (
+                            formData.functions.map((func, index) => (
+                              <Chip
+                                key={index}
+                                label={func}
+                                onDelete={() => handleRemoveFunction(func)}
+                                size="small"
+                                color="warning"
+                                variant="outlined"
+                                sx={{ borderRadius: 2 }}
+                              />
+                            ))
+                          )}
+                        </Box>
+                      </Box>
+
+                      {/* Country of Origin Section */}
+                      <Box>
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          sx={{ fontWeight: 600, mb: 2 }}
+                        >
+                          Country of Origin
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                          <FormControl fullWidth size="small">
+                            <InputLabel>Select Country</InputLabel>
+                            <Select
+                              value={countryInput}
+                              onChange={(e) => setCountryInput(e.target.value)}
+                              label="Select Country"
+                              disabled={filtersLoading}
+                              sx={{
+                                borderRadius: 2,
+                              }}
+                            >
+                              {countryOptions.map((country) => (
+                                <MenuItem key={country} value={country}>
+                                  {country}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                          <Button
+                            variant="contained"
+                            onClick={handleAddCountry}
+                            disabled={!countryInput.trim() || filtersLoading}
+                            size="small"
+                            sx={{
+                              borderRadius: 2,
+                              backgroundColor: '#9c27b0',
+                              '&:hover': { backgroundColor: '#7b1fa2' },
+                              minWidth: 'auto',
+                              px: 2,
+                            }}
+                          >
+                            Add
+                          </Button>
+                        </Box>
+
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 1,
+                            minHeight: 40,
+                          }}
+                        >
+                          {formData.countryOfOrigin.length === 0 ? (
+                            <Typography
+                              variant="caption"
+                              color="textSecondary"
+                              sx={{ alignSelf: 'center' }}
+                            >
+                              No countries added yet
+                            </Typography>
+                          ) : (
+                            formData.countryOfOrigin.map((country, index) => (
+                              <Chip
+                                key={index}
+                                label={country}
+                                onDelete={() => handleRemoveCountry(country)}
+                                size="small"
+                                color="secondary"
+                                variant="outlined"
+                                sx={{ borderRadius: 2 }}
+                              />
+                            ))
+                          )}
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+
+            {/* Row 5: Images - Full Width */}
+            <Box sx={{ width: '100%' }}>
+              <Card
+                sx={{
+                  height: '100%',
+                  borderRadius: 2,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                }}
+              >
+                <CardContent>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      mb: 2,
+                      fontWeight: 'bold',
+                      color: '#1F2A44',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      fontSize: '1.1rem',
+                    }}
+                  >
+                    <ViewListIcon sx={{ fontSize: '1rem' }} />
+                    Images
                   </Typography>
 
                   <Box
                     sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
                   >
-                    {/* Stock Status */}
+                    {/* Banner Image */}
                     <Box>
                       <Typography
                         variant="body2"
                         color="textSecondary"
-                        sx={{ fontWeight: 600, mb: 1 }}
+                        sx={{ fontWeight: 600, mb: 2 }}
                       >
-                        Stock Status
+                        Banner Image URL
                       </Typography>
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={formData.inStock}
-                            onChange={(e) =>
-                              handleInputChange('inStock', e.target.checked)
-                            }
-                            sx={{
-                              '& .MuiSwitch-switchBase': {
-                                '&.Mui-checked': {
-                                  color: '#4caf50',
-                                  '& + .MuiSwitch-track': {
-                                    backgroundColor: '#4caf50',
-                                  },
-                                },
-                              },
-                            }}
-                          />
+                      <TextField
+                        fullWidth
+                        value={formData.bannerImage}
+                        onChange={(e) =>
+                          handleInputChange('bannerImage', e.target.value)
                         }
-                        label={formData.inStock ? 'In Stock' : 'Out of Stock'}
+                        placeholder="https://example.com/banner-image.jpg"
+                        size="small"
                         sx={{
-                          margin: 0,
-                          alignItems: 'center',
-                          '& .MuiFormControlLabel-label': {
-                            fontWeight: 500,
-                            color: formData.inStock ? '#2e7d32' : '#d32f2f',
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
                           },
                         }}
                       />
@@ -517,30 +1187,30 @@ export default function EditProductModal({
 
                     <Divider />
 
-                    {/* Tags Section */}
+                    {/* Product Images */}
                     <Box>
                       <Typography
                         variant="body2"
                         color="textSecondary"
                         sx={{ fontWeight: 600, mb: 2 }}
                       >
-                        Product Tags
+                        Product Images
                       </Typography>
 
                       <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                         <TextField
-                          label="Add Tag"
-                          value={tagInput}
-                          onChange={(e) => setTagInput(e.target.value)}
+                          fullWidth
+                          label="Add Image URL"
+                          value={imageInput}
+                          onChange={(e) => setImageInput(e.target.value)}
                           onKeyPress={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault();
-                              handleAddTag();
+                              handleAddImage();
                             }
                           }}
                           size="small"
                           sx={{
-                            flexGrow: 1,
                             '& .MuiOutlinedInput-root': {
                               borderRadius: 2,
                             },
@@ -548,13 +1218,13 @@ export default function EditProductModal({
                         />
                         <Button
                           variant="contained"
-                          onClick={handleAddTag}
-                          disabled={!tagInput.trim()}
+                          onClick={handleAddImage}
+                          disabled={!imageInput.trim()}
                           size="small"
                           sx={{
                             borderRadius: 2,
-                            backgroundColor: '#1976d2',
-                            '&:hover': { backgroundColor: '#1565c0' },
+                            backgroundColor: '#2196f3',
+                            '&:hover': { backgroundColor: '#1976d2' },
                             minWidth: 'auto',
                             px: 2,
                           }}
@@ -571,22 +1241,26 @@ export default function EditProductModal({
                           minHeight: 40,
                         }}
                       >
-                        {formData.tags.length === 0 ? (
+                        {formData.images.length === 0 ? (
                           <Typography
                             variant="caption"
                             color="textSecondary"
                             sx={{ alignSelf: 'center' }}
                           >
-                            No tags added yet
+                            No images added yet
                           </Typography>
                         ) : (
-                          formData.tags.map((tag, index) => (
+                          formData.images.map((image, index) => (
                             <Chip
                               key={index}
-                              label={tag}
-                              onDelete={() => handleRemoveTag(tag)}
+                              label={
+                                image.length > 30
+                                  ? `${image.substring(0, 30)}...`
+                                  : image
+                              }
+                              onDelete={() => handleRemoveImage(image)}
                               size="small"
-                              color="primary"
+                              color="info"
                               variant="outlined"
                               sx={{ borderRadius: 2 }}
                             />
@@ -597,8 +1271,8 @@ export default function EditProductModal({
                   </Box>
                 </CardContent>
               </Card>
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         </Box>
 
         {updateProductMutation.error && (

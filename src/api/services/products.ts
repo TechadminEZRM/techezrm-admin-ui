@@ -25,6 +25,9 @@ export interface Product {
     logo: string;
     certificateLink: string;
   }>;
+  applications?: string[];
+  functions?: string[];
+  countryOfOrigin?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -152,26 +155,34 @@ class ProductService {
   // Update a product
   async updateProduct(
     id: string,
-    data: Partial<CreateProductRequest>
+    data: FormData | Partial<CreateProductRequest>
   ): Promise<ProductResponse> {
     try {
-      const formData = new FormData();
+      let formData: FormData;
 
-      if (data.name) formData.append('name', data.name);
-      if (data.description) formData.append('description', data.description);
-      if (data.price) formData.append('price', data.price.toString());
-      if (data.category) formData.append('category', data.category);
-      if (data.inStock !== undefined)
-        formData.append('inStock', data.inStock.toString());
+      if (data instanceof FormData) {
+        // If data is already FormData, use it directly
+        formData = data;
+      } else {
+        // Convert object to FormData
+        formData = new FormData();
 
-      if (data.bannerImage) {
-        formData.append('bannerImage', data.bannerImage);
-      }
+        if (data.name) formData.append('name', data.name);
+        if (data.description) formData.append('description', data.description);
+        if (data.price) formData.append('price', data.price.toString());
+        if (data.category) formData.append('category', data.category);
+        if (data.inStock !== undefined)
+          formData.append('inStock', data.inStock.toString());
 
-      if (data.images) {
-        data.images.forEach((image) => {
-          formData.append('images', image);
-        });
+        if (data.bannerImage) {
+          formData.append('bannerImage', data.bannerImage);
+        }
+
+        if (data.images) {
+          data.images.forEach((image) => {
+            formData.append('images', image);
+          });
+        }
       }
 
       const response = await api.put(`${this.baseUrl}/${id}`, formData, {

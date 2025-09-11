@@ -3,6 +3,7 @@ export { userService } from './userService';
 // export { productsService } from './products';
 export { productService } from './products';
 export { productVariantService } from './productVariants';
+export { productFiltersService } from './productFilters';
 export { rfqService } from './rfq';
 export { ordersService } from './orders';
 export { customerReviewsService } from './customerReviews';
@@ -85,3 +86,12 @@ export type {
   ProductVariantResponse,
   ProductVariantsListResponse,
 } from './productVariants';
+export type {
+  Category,
+  Application,
+  Tag,
+  Function,
+  CountryOfOrigin,
+  ProductFiltersData,
+  ProductFiltersResponse,
+} from './productFilters';

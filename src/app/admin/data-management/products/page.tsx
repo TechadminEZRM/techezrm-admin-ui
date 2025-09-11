@@ -14,17 +14,16 @@ import {
   IconButton,
   Chip,
   Avatar,
-  FormControl,
-  Select,
-  MenuItem,
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productService } from '@/api/services/products';
+import { useCategories } from '@/hooks/useCategories';
 import {
   TableComponent,
   TableRowData,
 } from '../../../../components/TableComponent';
+import { TableFilter } from '@/components';
 import { toast } from 'react-toastify';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -37,6 +36,13 @@ import Image from 'next/image';
 import ProductVariantsModal from '../../../../components/modals/ProductVariantsModal';
 import EditProductModal from '../../../../components/modals/EditProductModal';
 import ProductDetailsModal from '../../../../components/modals/ProductDetailsModal';
+import ExportModal from '../../../../components/modals/ExportModal';
+import {
+  exportToPDF,
+  exportToExcel,
+  exportToCSV,
+  getAllProductsForExport,
+} from '../../../../utils/exportUtils';
 
 interface ProductRowData extends TableRowData {
   id: string;
@@ -55,8 +61,8 @@ export default function ProductsListing() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -71,6 +77,8 @@ export default function ProductsListing() {
   } | null>(null);
   const [productToEdit, setProductToEdit] = useState<any>(null);
   const [productToView, setProductToView] = useState<string | null>(null);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const renderImage = (imageUrl: string) => {
     if (!imageUrl) {
@@ -134,6 +142,9 @@ export default function ProductsListing() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  // Fetch categories
+  const { data: categoriesData } = useCategories();
+
   // Fetch products
   const {
     data: productsData,
@@ -145,16 +156,16 @@ export default function ProductsListing() {
       {
         page,
         search: debouncedSearchTerm,
-        category: categoryFilter,
-        status: statusFilter,
+        category: categoryFilter?.value,
+        status: statusFilter?.value,
       },
     ],
     queryFn: () =>
       productService.getProducts({
         page,
         search: debouncedSearchTerm,
-        category: categoryFilter,
-        status: statusFilter,
+        category: categoryFilter?.value || '',
+        status: statusFilter?.value || '',
       }),
   });
 
@@ -264,7 +275,7 @@ export default function ProductsListing() {
 
   const handleRowClick = (row: TableRowData) => {
     const productRow = row as ProductRowData;
-    router.push(`/admin/data-management/products/${productRow.id}`);
+    // router.push(`/admin/data-management/products/${productRow.id}`);
   };
 
   const handleAddProduct = () => {
@@ -319,15 +330,47 @@ export default function ProductsListing() {
     { value: 'inactive', label: 'Inactive' },
   ];
 
+  // Create category options from API data
   const categoryOptions = [
     { value: '', label: 'All Categories' },
-    { value: 'Sports Nutrition', label: 'Sports Nutrition' },
-    { value: 'Bioactives', label: 'Bioactives' },
-    { value: 'Nootropics', label: 'Nootropics' },
-    { value: 'Amino Acids', label: 'Amino Acids' },
-    { value: 'Vitamins', label: 'Vitamins' },
-    { value: 'Minerals', label: 'Minerals' },
+    ...(categoriesData?.categories?.map((category: any) => ({
+      value: category.id || category._id,
+      label: category.name,
+    })) || []),
   ];
+
+  // Reset filters handler
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setCategoryFilter(null);
+    setStatusFilter(null);
+  };
+
+  // Export handler
+  const handleExport = async (format: 'pdf' | 'excel' | 'csv') => {
+    setIsExporting(true);
+    try {
+      // Fetch all products for export
+      const allProducts = await getAllProductsForExport(productService);
+
+      if (format === 'pdf') {
+        await exportToPDF(allProducts, 'products');
+        toast.success('Products exported to PDF successfully!');
+      } else if (format === 'excel') {
+        await exportToExcel(allProducts, 'products');
+        toast.success('Products exported to Excel successfully!');
+      } else if (format === 'csv') {
+        await exportToCSV(allProducts, 'products');
+        toast.success('Products exported to CSV successfully!');
+      }
+
+      setExportModalOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to export products');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <Box
@@ -386,40 +429,43 @@ export default function ProductsListing() {
 
       {/* Filters */}
       {!isLoading && !error && (
-        <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
-          <FormControl sx={{ minWidth: 200 }} size="small">
-            <Select
-              value={categoryFilter}
-              onChange={(e: any) => setCategoryFilter(e.target.value)}
-              displayEmpty
-              sx={{
-                '& .MuiSelect-select': { fontFamily: 'Poppins, sans-serif' },
-              }}
-            >
-              {categoryOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl sx={{ minWidth: 200 }} size="small">
-            <Select
-              value={statusFilter}
-              onChange={(e: any) => setStatusFilter(e.target.value)}
-              displayEmpty
-              sx={{
-                '& .MuiSelect-select': { fontFamily: 'Poppins, sans-serif' },
-              }}
-            >
-              {statusOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
+        <TableFilter
+          search={[
+            {
+              key: 'search',
+              label: 'Search Products',
+              placeholder: 'Search by name, ID, or category...',
+              value: searchTerm,
+              handleChange: setSearchTerm,
+            },
+          ]}
+          dropDowns={[
+            {
+              key: 'category',
+              placeholder: 'All Categories',
+              options: categoryOptions,
+              value: categoryFilter,
+              handleChange: setCategoryFilter,
+            },
+            {
+              key: 'status',
+              placeholder: 'All Status',
+              options: statusOptions,
+              value: statusFilter,
+              handleChange: setStatusFilter,
+            },
+          ]}
+          buttons={[
+            {
+              key: 'export',
+              label: 'Export',
+              onClick: () => setExportModalOpen(true),
+              backgroundColor: '#06A561',
+              hoverBackgroundColor: '#059669',
+            },
+          ]}
+          onReset={handleResetFilters}
+        />
       )}
 
       {!isLoading && !error && (
@@ -433,11 +479,6 @@ export default function ProductsListing() {
           showCheckboxes={false}
           showHeader={true}
           rowsPerPage={10}
-          searchOptions={{
-            value: searchTerm,
-            onChange: setSearchTerm,
-            placeholder: 'Search products...',
-          }}
         />
       )}
 
@@ -582,6 +623,14 @@ export default function ProductsListing() {
           productId={productToView}
         />
       )}
+
+      {/* Export Modal */}
+      <ExportModal
+        open={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        onExport={handleExport}
+        isLoading={isExporting}
+      />
     </Box>
   );
 }

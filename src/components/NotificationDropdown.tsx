@@ -125,6 +125,10 @@ export default function NotificationDropdown({
     queryKey: ['notifications-unread-count'],
     queryFn: () => notificationService.getUnreadCount(),
     refetchInterval: 30000, // Refetch every 30 seconds
+    retry: false, // Don't retry on error to prevent console spam
+    onError: (error) => {
+      console.warn('Failed to fetch unread notifications count:', error);
+    },
   });
 
   // Mark as read mutation
