@@ -33,6 +33,8 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useUpdateProduct } from "@/api/handlers"
 import { useUIStore } from "@/store/uiStore"
 import type { CreateProductRequest } from "@/api/services"
+import { useQuery } from "@tanstack/react-query"
+import { categoryService } from "@/api/services/categories"
 
 // Create a custom styled Switch component
 const CustomSwitch = styled(Switch)(() => ({
@@ -126,18 +128,19 @@ export default function UpdateProductDetail({ product }: DetailProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Get product data from URL params if not passed as prop
-  const productData = product || {
-    id: searchParams.get("id") || "",
-    name: searchParams.get("name") || "",
-    description: searchParams.get("description") || "",
-    inventory: searchParams.get("inventory") || "",
-    category: searchParams.get("category") || "",
-    price: searchParams.get("price") || "",
-    inStock: searchParams.get("inStock") || "true",
-  }
+const productData = {
+  id: product?.id ?? searchParams.get("id") ?? "",
+  name: product?.name ?? searchParams.get("name") ?? "",
+  description: product?.description ?? searchParams.get("description") ?? "",
+  inventory: product?.inventory ?? searchParams.get("inventory") ?? "",
+  category: product?.category ?? searchParams.get("category") ?? "",
+  price: product?.price ?? searchParams.get("price") ?? "",
+  inStock: product?.inStock ?? searchParams.get("inStock") ?? "true",
+};
+
 
   console.log("=== COMPONENT INITIALIZATION ===")
-  console.log("Product data from URL/props:", productData)
+  console.log(searchParams,"Product data from URL/props:", productData)
 
   // Hooks
   const { notifications, addNotification } = useUIStore()
@@ -160,7 +163,29 @@ export default function UpdateProductDetail({ product }: DetailProps) {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
   // Category state
-  const [categories, setCategories] = useState(["Amino Acids", "Vitamins", "Supplements", "Protein", "Pre-workout"])
+  // const [categories, setCategories] = useState(["Amino Acidsss", "Vitamins", "Supplements", "Protein", "Pre-workout"])
+    // Fetch categories
+  const {
+    data: categoriesData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => categoryService.fetchAllCategories(),
+  });
+
+
+  type CategoryItem = {
+    _id: string;
+    name: string;
+  };
+
+  const categories: CategoryItem[] =
+    categoriesData?.data?.categories?.map((cat: any) => ({
+      _id: cat._id,
+      name: cat.name,
+    })) ?? [];
+
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [showCreateCategory, setShowCreateCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
@@ -178,11 +203,51 @@ export default function UpdateProductDetail({ product }: DetailProps) {
   console.log("In stock:", inStock)
 
   // Initialize form with existing product data
+// useEffect(() => {
+//   console.log("=== USEEFFECT RUNNING ===")
+//   console.log("Product category:", productData.category)
+
+//   // Set form data if not already set
+//   if (productData.name && !formData.name) {
+//     setFormData(prev => ({
+//       ...prev,
+//       name: productData.name,
+//       description: productData.description || "",
+//       price: productData.price?.replace("$", "") || "",
+//       category: productData.category || "",
+//     }))
+//   }
+
+//   // Set initial category selection
+//   if (productData.category) {
+//     // Add category to categories list if it doesn't exist
+//     setCategories(prev => {
+//       if (!prev.includes(productData.category)) {
+//         console.log("Adding category to list:", productData.category)
+//         return [...prev, productData.category]
+//       }
+//       return prev
+//     })
+
+//     // Set selected categories if not already set
+//     setSelectedCategories(prev => {
+//       if (!prev.includes(productData.category)) {
+//         console.log("Setting initial category:", productData.category)
+//         return [productData.category]
+//       }
+//       return prev
+//     })
+//   }
+
+//   // Set stock status
+//   setInStock(productData.inStock === "true")
+// }, [productData]) 
+
 useEffect(() => {
   console.log("=== USEEFFECT RUNNING ===")
-  console.log("Product category:", productData.category)
+  console.log("Product category:", productData)
 
-  // Set form data if not already set
+  // Set form data once
   if (productData.name && !formData.name) {
     setFormData(prev => ({
       ...prev,
@@ -193,30 +258,20 @@ useEffect(() => {
     }))
   }
 
-  // Set initial category selection
+  // Set initial selected category (DO NOT TOUCH categories list)
   if (productData.category) {
-    // Add category to categories list if it doesn't exist
-    setCategories(prev => {
-      if (!prev.includes(productData.category)) {
-        console.log("Adding category to list:", productData.category)
-        return [...prev, productData.category]
-      }
-      return prev
-    })
-
-    // Set selected categories if not already set
     setSelectedCategories(prev => {
       if (!prev.includes(productData.category)) {
-        console.log("Setting initial category:", productData.category)
-        return [productData.category]
+        return [productData.category] // single-select
       }
       return prev
     })
   }
 
-  // Set stock status
+  // Stock status
   setInStock(productData.inStock === "true")
-}, [productData]) 
+}, [productData])
+
 
   // Form validation with detailed logging
   const validateForm = (): boolean => {
@@ -388,10 +443,10 @@ useEffect(() => {
   }
 
   // Category handlers
-  const handleCategoryChange = (category: string) => {
+  const handleCategoryChange = (category: CategoryItem) => {
     console.log("Category changed:", category)
     setSelectedCategories((prev) => {
-      const newSelection = prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
+      const newSelection = prev.includes(category?._id) ? prev.filter((c) => c !== category._id) : [...prev, category._id]
       console.log("New category selection:", newSelection)
       return newSelection
     })
@@ -402,13 +457,13 @@ useEffect(() => {
     }
   }
 
-  const handleCreateCategory = () => {
-    if (newCategoryName && !categories.includes(newCategoryName)) {
-      setCategories([...categories, newCategoryName])
-      setNewCategoryName("")
-      setShowCreateCategory(false)
-    }
-  }
+  // const handleCreateCategory = () => {
+  //   if (newCategoryName && !categories.includes(newCategoryName)) {
+  //     setCategories([...categories, newCategoryName])
+  //     setNewCategoryName("")
+  //     setShowCreateCategory(false)
+  //   }
+  // }
 
   // Get the latest notification for display
   const latestNotification = notifications[notifications.length - 1]
@@ -789,22 +844,22 @@ useEffect(() => {
                 </Typography>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                   {categories.map((category) => (
-                    <Box key={category} sx={{ display: "flex", alignItems: "center" }}>
+                    <Box key={category?._id} sx={{ display: "flex", alignItems: "center" }}>
                       <FormControlLabel
                         control={
                           <Checkbox
                             size="small"
-                            checked={selectedCategories.includes(category)}
+                            checked={selectedCategories.includes(category?._id)}
                             onChange={() => handleCategoryChange(category)}
                           />
                         }
                         label=""
                         sx={{ m: 0, mr: -1 }}
                       />
-                      <Typography variant="body2">{category}</Typography>
+                      <Typography variant="body2">{category.name}</Typography>
                     </Box>
                   ))}
-                  <Button
+                  {/* <Button
                     variant="text"
                     onClick={() => setShowCreateCategory(true)}
                     sx={{
@@ -816,7 +871,7 @@ useEffect(() => {
                     }}
                   >
                     Create New
-                  </Button>
+                  </Button> */}
                 </Box>
                 {formErrors.categories && (
                   <Typography variant="caption" color="error" sx={{ mt: 1, display: "block" }}>
@@ -891,9 +946,9 @@ useEffect(() => {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowCreateCategory(false)}>Cancel</Button>
-            <Button onClick={handleCreateCategory} variant="contained">
+            {/* <Button onClick={handleCreateCategory} variant="contained">
               Create
-            </Button>
+            </Button> */}
           </DialogActions>
         </Dialog>
       </Box>

@@ -88,7 +88,7 @@ export default function UpdateList() {
         name: originalProduct.name,
         description: originalProduct.description,
         inventory: productRow.inventory,
-        category: originalProduct.category,
+        category: originalProduct.category?._id,
         price: originalProduct.price.toString(),
         inStock: originalProduct.inStock.toString(),
       }).toString()
@@ -153,7 +153,7 @@ export default function UpdateList() {
         <TableComponent
           columns={columns}
           data={tableData}
-          totalResults={productsData?.total || 0}
+          totalResults={productsData?.pagination?.total || 0}
           currentPage={page}
           onPageChange={handlePageChange}
           onRowClick={handleRowClick}

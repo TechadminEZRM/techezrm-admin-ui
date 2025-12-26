@@ -10,23 +10,44 @@ import { useUIStore } from '@/store/uiStore';
 import { productService } from '../services';
 import { CreateProductRequest } from '../services/products';
 
+// export const useProducts = ({
+//   page = 1,
+//   limit = 10,
+//   search = '',
+//   name = '',
+//   category = '',
+//   sortBy = 'createdAt',
+//   sortOrder = 'desc' as 'asc' | 'desc',
+// } = {}) => {
+//   return useQuery({
+//     queryKey: [
+//       'products',
+//       { page, limit, search, name, category, sortBy, sortOrder },
+//     ] as const,
+//     // queryFn: productService.getProducts,
+//     staleTime: 5 * 60 * 1000, // 5 minutes
+//     placeholderData: keepPreviousData, // Updated from keepPreviousData: true
+//   });
+// };
+
 export const useProducts = ({
   page = 1,
-  limit = 10,
   search = '',
-  name = '',
   category = '',
-  sortBy = 'createdAt',
-  sortOrder = 'desc' as 'asc' | 'desc',
+  status = '',
 } = {}) => {
   return useQuery({
-    queryKey: [
-      'products',
-      { page, limit, search, name, category, sortBy, sortOrder },
-    ] as const,
-    // queryFn: productService.getProducts,
+    queryKey: ['products', { page, search, category, status }],
+    queryFn: () =>
+      productService.getProducts({
+        page,
+        search,
+        category,
+        status,
+      }),
+
     staleTime: 5 * 60 * 1000, // 5 minutes
-    placeholderData: keepPreviousData, // Updated from keepPreviousData: true
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -106,13 +127,43 @@ export const useProductsByPriceRange = () => {
   });
 };
 
+// export const useAddProduct = () => {
+//   const queryClient = useQueryClient();
+//   const { addNotification } = useUIStore();
+
+//   return useMutation({
+//     mutationFn: (data: CreateProductRequest) => productService.addProduct(data),
+//     onSuccess: (newProduct) => {
+//       // Invalidate and refetch products
+//       queryClient.invalidateQueries({ queryKey: ['products'] });
+
+//       // Show success notification
+//       addNotification({
+//         type: 'success',
+//         message: 'Product added successfully!',
+//       });
+//     },
+//     onError: (error: any) => {
+//       console.error('Add product error:', error);
+
+//       // Show error notification
+//       addNotification({
+//         type: 'error',
+//         message: error?.message || 'Failed to add product',
+//       });
+//     },
+//   });
+// };
+
+
 export const useAddProduct = () => {
   const queryClient = useQueryClient();
   const { addNotification } = useUIStore();
 
   return useMutation({
-    mutationFn: (data: CreateProductRequest) => productService.addProduct(data),
-    onSuccess: (newProduct) => {
+    mutationFn: (data: CreateProductRequest) =>
+      productService.createProduct(data),
+    onSuccess: () => {
       // Invalidate and refetch products
       queryClient.invalidateQueries({ queryKey: ['products'] });
 

@@ -1,6 +1,6 @@
 "use client"
 import type React from "react"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import {
   Box,
   Typography,
@@ -31,6 +31,8 @@ import { useRouter } from "next/navigation"
 import { useAddProduct } from "@/api/handlers"
 import { useUIStore } from "@/store/uiStore"
 import type { CreateProductFormData } from "@/api/services"
+import { categoryService } from '@/api/services/categories';
+import { useQuery } from "@tanstack/react-query"
 
 // Create a custom styled Switch component
 const CustomSwitch = styled(Switch)(() => ({
@@ -140,12 +142,41 @@ export default function Detail({ product }: DetailProps) {
 
   // Form validation state
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  // Fetch categories
+  const {
+    data: categoriesData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => categoryService.fetchAllCategories(),
+  });
 
+  
   // Category state
-  const [categories, setCategories] = useState(["Amino Acids", "Vitamins", "Supplements", "Protein", "Pre-workout"])
+type CategoryItem = {
+  _id: string;
+  name: string;
+};
+
+const categories: CategoryItem[] =
+  categoriesData?.data?.categories?.map((cat: any) => ({
+    _id: cat._id,
+    name: cat.name,
+  })) ?? [];
+
+
+  // const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [showCreateCategory, setShowCreateCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
+  
+ useEffect(() => {
+  if (categoriesData) {
+    console.log("Categories loaded:", categoriesData);
+  }
+}, [categoriesData]);
+
 
   const [formData, setFormData] = useState({
     name: product?.name || "",
@@ -293,23 +324,27 @@ export default function Detail({ product }: DetailProps) {
   }
 
   // Category handlers
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category],
-    )
-    // Clear category error when user selects a category
-    if (formErrors.categories) {
-      setFormErrors((prev) => ({ ...prev, categories: "" }))
-    }
-  }
+ const handleCategoryChange = (category: CategoryItem) => {
+  setSelectedCategories((prev) =>
+    prev.includes(category._id)
+      ? prev.filter((id) => id !== category._id)
+      : [...prev, category._id]
+  );
 
-  const handleCreateCategory = () => {
-    if (newCategoryName && !categories.includes(newCategoryName)) {
-      setCategories([...categories, newCategoryName])
-      setNewCategoryName("")
-      setShowCreateCategory(false)
-    }
+  if (formErrors.categories) {
+    setFormErrors((prev) => ({ ...prev, categories: "" }));
   }
+}
+
+const handleCreateCategory = () => {
+  if (!newCategoryName.trim()) return;
+  const alreadyExists = categories.some(
+    (cat) => cat.name.toLowerCase() === newCategoryName.toLowerCase()
+  );
+
+  if (alreadyExists) return;
+  // createCategoryMutation.mutate({ name: newCategoryName });
+};
 
   // Get the latest notification for display
   const latestNotification = notifications[notifications.length - 1]
@@ -678,36 +713,39 @@ export default function Detail({ product }: DetailProps) {
                   Categories *
                 </Typography>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  {categories.map((category) => (
-                    <Box key={category} sx={{ display: "flex", alignItems: "center" }}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            size="small"
-                            checked={selectedCategories.includes(category)}
-                            onChange={() => handleCategoryChange(category)}
-                          />
-                        }
-                        label=""
-                        sx={{ m: 0, mr: -1 }}
-                      />
-                      <Typography variant="body2">{category}</Typography>
-                    </Box>
-                  ))}
-                  <Button
-                    variant="text"
-                    onClick={() => setShowCreateCategory(true)}
-                    sx={{
-                      color: "#1976d2",
-                      textTransform: "none",
-                      justifyContent: "flex-start",
-                      p: 0,
-                      mt: 1,
-                    }}
-                  >
-                    Create New
-                  </Button>
-                </Box>
+                    {categories.map((category) => (
+                      <Box
+                        key={category._id}
+                        sx={{ display: "flex", alignItems: "center" }}
+                      >
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              size="small"
+                              checked={selectedCategories.includes(category._id)}
+                              onChange={() => handleCategoryChange(category)}
+                            />
+                          }
+                          label=""
+                          sx={{ m: 0, mr: -1 }}
+                        />
+                        <Typography variant="body2">{category.name}</Typography>
+                      </Box>
+                    ))}
+                   {/*  <Button
+                      variant="text"
+                      onClick={() => setShowCreateCategory(true)}
+                      sx={{
+                        color: "#1976d2",
+                        textTransform: "none",
+                        justifyContent: "flex-start",
+                        p: 0,
+                        mt: 1,
+                      }}
+                    >
+                      Create New
+                    </Button> */}
+                  </Box>
                 {formErrors.categories && (
                   <Typography variant="caption" color="error" sx={{ mt: 1, display: "block" }}>
                     {formErrors.categories}

@@ -121,7 +121,7 @@ export default function DeleteProductPage() {
       <Typography
         sx={{ fontSize: "24px", fontWeight: "bold", color: "#1F2A44", mb: 2, fontFamily: "Poppins, sans-serif" }}
       >
-        Delete Product
+        Delete Product 
       </Typography>
 
       {latestNotification && (
@@ -190,7 +190,7 @@ export default function DeleteProductPage() {
           <TableComponent
             columns={columns}
             data={productRows}
-            totalResults={productsData?.total || 0}
+            totalResults={productsData?.pagination?.total || 0}
             currentPage={page}
             onPageChange={setPage}
             showCheckboxes={true}

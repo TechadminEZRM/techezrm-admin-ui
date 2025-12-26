@@ -114,6 +114,18 @@ class CategoryService {
       );
     }
   }
+    // Get all categories without pagination and filtering
+  async fetchAllCategories() {
+    try {
+      const url = this.baseUrl + '/all';
+      const response = await api.get(url);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || 'Failed to fetch categories'
+      );
+    }
+  }
 }
 
 export const categoryService = new CategoryService();

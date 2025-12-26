@@ -451,8 +451,10 @@ const renderStatusCell = (value: unknown) => {
                     {columns.map((column) => {
                       const cellValue = row[column.id];
                       let content: React.ReactNode = null;
-
-                      if (column.type === 'status' || column.id === 'status') {
+                       if (column.label === 'Category') {
+                        content = cellValue?.name || '-';
+                      }
+                      else if (column.type === 'status' || column.id === 'status') {
                         content = renderStatusCell(cellValue);
                       } else if (column.type === 'link') {
                         content = renderLinkCell(cellValue, row);

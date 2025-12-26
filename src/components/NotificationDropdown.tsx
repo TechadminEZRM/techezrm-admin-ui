@@ -119,17 +119,17 @@ export default function NotificationDropdown({
     queryFn: () => notificationService.getNotifications({ page, limit: 10 }),
     enabled: open,
   });
-
+const unreadCountData=0;
   // Fetch unread count
-  const { data: unreadCountData } = useQuery({
-    queryKey: ['notifications-unread-count'],
-    queryFn: () => notificationService.getUnreadCount(),
-    refetchInterval: 30000, // Refetch every 30 seconds
-    retry: false, // Don't retry on error to prevent console spam
-    onError: (error) => {
-      console.warn('Failed to fetch unread notifications count:', error);
-    },
-  });
+  // const { data: unreadCountData } = useQuery({
+  //   queryKey: ['notifications-unread-count'],
+  //   queryFn: () => notificationService.getUnreadCount(),
+  //   refetchInterval: 30000, // Refetch every 30 seconds
+  //   retry: false, // Don't retry on error to prevent console spam
+  //   onError: (error) => {
+  //     console.warn('Failed to fetch unread notifications count:', error);
+  //   },
+  // });
 
   // Mark as read mutation
   const markAsReadMutation = useMutation({
@@ -166,7 +166,7 @@ export default function NotificationDropdown({
 
   const notifications = notificationsData?.data?.notifications || [];
   const totalNotifications = notificationsData?.data?.total || 0;
-  const unreadCount = unreadCountData?.count || 0;
+  const unreadCount = unreadCountData || 0;
 
   const handleNotificationClick = (notification: any) => {
     if (notification.status === 'unread') {

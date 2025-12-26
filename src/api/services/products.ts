@@ -69,7 +69,7 @@ class ProductService {
     throw new Error('Method not implemented.');
   }
   private baseUrl = '/private/products';
-  addProduct: any;
+  // addProduct: any;
   searchProducts: any;
   getProductsByStockStatus: any;
 
@@ -119,6 +119,42 @@ class ProductService {
   }
 
   // Create a new product
+  // async createProduct(data: CreateProductRequest): Promise<ProductResponse> {
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append('name', data.name);
+  //     formData.append('description', data.description);
+  //     formData.append('price', data.price.toString());
+  //     formData.append('category', data.category);
+  //     formData.append('inStock', data.inStock.toString());
+
+  //     if (data.bannerImage) {
+  //       formData.append('bannerImage', data.bannerImage);
+  //     }
+
+  //     if (data.images) {
+  //       // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  //       data.images.forEach((image, index) => {
+  //         formData.append(`images`, image);
+  //       });
+  //     }
+
+  //     const response = await api.post(this.baseUrl, formData, {
+  //       headers: {
+  //         'Content-Type': 'multipart/form-data',
+  //       },
+  //     });
+  //     return response.data;
+  //   } catch (error: any) {
+  //     throw new Error(
+  //       error.response?.data?.message || 'Failed to create product'
+  //     );
+  //   }
+  // }
+
+  async addProduct(data: CreateProductRequest): Promise<ProductResponse> {
+    return this.createProduct(data);
+  }
   async createProduct(data: CreateProductRequest): Promise<ProductResponse> {
     try {
       const formData = new FormData();
@@ -127,22 +163,22 @@ class ProductService {
       formData.append('price', data.price.toString());
       formData.append('category', data.category);
       formData.append('inStock', data.inStock.toString());
-
+  
       if (data.bannerImage) {
         formData.append('bannerImage', data.bannerImage);
       }
-
+  
       if (data.images) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        data.images.forEach((image, index) => {
-          formData.append(`images`, image);
+        data.images.forEach((image) => {
+          formData.append('images', image);
         });
       }
-
+  
       const response = await api.post(this.baseUrl, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+           'Content-Type': 'multipart/form-data'
+           },
       });
       return response.data;
     } catch (error: any) {
