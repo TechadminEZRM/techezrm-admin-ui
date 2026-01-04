@@ -10,6 +10,7 @@ const nextConfig: import('next').NextConfig = {
   images: {
     unoptimized: true,
   },
+  output: 'standalone',
 };
 
 export default nextConfig;
