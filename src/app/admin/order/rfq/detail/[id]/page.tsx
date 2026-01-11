@@ -233,7 +233,7 @@ const RFQDetail = () => {
                       {rfqData.productName}
                     </Typography>
                     <Typography variant="body2" sx={{ color: "#666" }}>
-                      {rfqData.description.substring(0, 20)}...
+                      {rfqData?.description?.substring(0, 20)}...
                     </Typography>
                   </Box>
                 </Box>
