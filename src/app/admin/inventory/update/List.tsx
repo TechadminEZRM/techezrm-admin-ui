@@ -44,7 +44,7 @@ export default function UpdateList() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const processRowData = (product: any): ProductRowData => ({
     id: product.id || product._id,
-    name: `${product.name} - ${product.description}`, // Combine name and description
+    name: `${product.name}`, // Combine name and description
     description: product.description,
     inventory: product.inStock ? `${Math.floor(Math.random() * 100)} in stock` : "Out of Stock",
     loreal: product.category,
