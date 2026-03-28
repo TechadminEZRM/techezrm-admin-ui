@@ -45,14 +45,12 @@ export interface ApiResponse {
   data: {
     rfqs: RFQItem[]
   }
-  pagination?: {
     total: number
     page: number
     limit: number
     totalPages: number
     hasNext: boolean
     hasPrev: boolean
-  }
 }
 
 // Single RFQ response structure - Updated to match your actual response
@@ -87,21 +85,21 @@ export const rfqService = {
       })
 
       console.log("Raw RFQ API Response:", data)
-
+      
       // Handle the actual API response structure
       const apiResponse = data as ApiResponse
-
+      
       // Get RFQs from the nested data structure
       const rfqs = apiResponse.data?.rfqs || []
-
+      
       console.log("Transformed RFQs:", rfqs)
 
       return {
-        rfqs,
-        total: apiResponse.pagination?.total || rfqs.length,
-        page: apiResponse.pagination?.page || page,
-        limit: apiResponse.pagination?.limit || limit,
-        totalPages: apiResponse.pagination?.totalPages || Math.ceil(rfqs.length / limit),
+        rfqs:data?.data,
+        total: apiResponse.total || rfqs.length,
+        page: apiResponse.page || page,
+        limit: apiResponse.limit || limit,
+        totalPages: apiResponse.totalPages || Math.ceil(rfqs.length / limit),
       }
     } catch (error) {
       console.error("Error fetching RFQs:", error)

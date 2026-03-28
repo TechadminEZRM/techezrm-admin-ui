@@ -68,19 +68,19 @@ export default function OrderList() {
     rfqData?.rfqs?.map((rfq) => {
       try {
         return {
-          id: rfq.id,
+          id: rfq?._id,
           customerName: rfq.customerName || "N/A",
           email: rfq.customerEmail || "N/A",
           phoneNumber: rfq.customerPhone || "N/A",
           quantity: rfq.quantity?.toString() || "0",
           dateTime: rfq.createdAt ? new Date(rfq.createdAt).toLocaleString() : "N/A",
-          trackOrder: rfq.uniqueId || rfq.id,
+          trackOrder: rfq.uniqueId || rfq?._id,
           status: rfq.status || "pending",
         }
       } catch (err) {
         console.error("Error transforming RFQ data:", err, rfq)
         return {
-          id: rfq.id || "unknown",
+          id: rfq?._id || "unknown",
           customerName: "Error loading data",
           email: "N/A",
           phoneNumber: "N/A",
@@ -197,7 +197,7 @@ export default function OrderList() {
           onLinkClick={handleLinkClick}
           showCheckboxes={false}
           showHeader={true}
-          rowsPerPage={9}
+          rowsPerPage={rfqData?.limit || 10}
           searchOptions={{
             value: searchTerm,
             onChange: handleSearchChange,
