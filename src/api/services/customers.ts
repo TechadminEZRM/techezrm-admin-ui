@@ -273,6 +273,42 @@ class CustomerService {
   getCustomerAddresses(customer: Customer): any[] {
     return customer.addresses || [];
   }
+
+  // Approve customer signup
+  async approveCustomer(
+    customerId: string,
+    adminNotes?: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await api.post(
+        `/private/customer-signup/approve/${customerId}`,
+        { adminNotes }
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || 'Failed to approve customer'
+      );
+    }
+  }
+
+  // Reject customer signup
+  async rejectCustomer(
+    customerId: string,
+    adminNotes: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await api.post(
+        `/private/customer-signup/reject/${customerId}`,
+        { adminNotes }
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || 'Failed to reject customer'
+      );
+    }
+  }
 }
 
 export const customerService = new CustomerService();

@@ -31,12 +31,23 @@ export const authService = {
   // Login
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     const response = await api.post(ENDPOINTS.AUTH.LOGIN, credentials);
-    return response.data;
+    const body = response.data;
+    return {
+      user: {
+        id: body.data?.id || body.data?.email,
+        name: body.data?.name || '',
+        email: body.data?.email || '',
+        role: body.data?.role,
+      },
+      token: body.data?.token || '',
+      refreshToken: '',
+    };
   },
 
   // Register
   register: async (userData: RegisterData): Promise<AuthResponse> => {
     const { data } = await api.post(ENDPOINTS.AUTH.REGISTER, userData);
+    console.log({ email: userData.email, password: userData.password }); // Auto-login after registration
     return data;
   },
 

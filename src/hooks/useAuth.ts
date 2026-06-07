@@ -63,12 +63,12 @@ export const useLogin = () => {
     },
     onSuccess: (data) => {
       // Store token in localStorage
-      if (data.token) {
-        localStorage.setItem('auth-token', data.token);
+      if (data.data?.token) {
+        localStorage.setItem('auth-token', data.data.token);
       }
 
       // Update auth store
-      login(data.user, data.token);
+      login(data.data.user, data.data.token);
     },
     onError: (error) => {
       console.error('Login error:', error);
